@@ -1,3 +1,4 @@
+/** @OnlyCurrentDoc */
 /**
  * Grade 4 Practice Tests: saves progress to this Google Sheet.
  * Setup: change FAMILY_CODE below, then Deploy > New deployment > Web app
