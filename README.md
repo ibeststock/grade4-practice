@@ -4,6 +4,8 @@ Six FAST-style practice tests for 4th grade. Each test has two passages with dif
 
 **Open the tests:** https://ibeststock.github.io/grade4-practice/
 
+### Reading & Writing
+
 | Test | Level | Passages | Writing |
 |---|---|---|---|
 | 1 | On level | Alligators vs. crocodiles · Sea turtles | Expository |
@@ -13,7 +15,17 @@ Six FAST-style practice tests for 4th grade. Each test has two passages with dif
 | 5 | Advanced | Launch-day story · Rocket science | Argumentative |
 | 6 | Advanced | How hurricanes form · Storm poem | Expository |
 
-Printable versions with lined writing pages and answer keys are in [`pdfs/`](pdfs/).
+### Math (FAST-style, 40 questions each, no calculator)
+
+| Test | Level | Topics |
+|---|---|---|
+| Math Practice 1 | On level | Place value, fractions, angles, line plots |
+| Math Practice 2 | Challenge | Multi-digit operations, mixed numbers, protractors, data |
+| Math Practice 3 | Advanced | Multi-step problems, error analysis, composite area, data |
+
+Each math test follows Florida's Grade 4 FAST blueprint: about one-third whole numbers & algebra, one-third fractions & decimals, and one-third geometry, measurement & data.
+
+Printable versions with answer keys are in [`pdfs/`](pdfs/). Reading tests include lined writing pages.
 
 ## Saving progress to a Google Sheet (about 5 minutes, once)
 
