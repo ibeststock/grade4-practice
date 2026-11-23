@@ -168,6 +168,23 @@ summary{font-weight:700;cursor:pointer;min-height:32px}
 .rub th,.rub td{border:1px solid var(--line);padding:6px 8px;vertical-align:top;text-align:left}
 .rub select{padding:4px;font-size:16px}
 .essay{white-space:pre-wrap;background:var(--bg);border-radius:8px;padding:12px;font-size:15px}
+
+.login h2{font:600 22px Lexend,sans-serif;margin:6px 0 14px}
+.names{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:14px;margin:0 0 12px}
+.name{display:flex;flex-direction:column;align-items:center;gap:10px;padding:22px 12px;border:2px solid var(--line);border-radius:18px;background:var(--paper);font:600 20px Lexend,sans-serif;min-height:150px;justify-content:center}
+.name:hover{border-color:var(--accent)}
+.name .ini{width:64px;height:64px;border-radius:50%;display:grid;place-items:center;background:var(--accent);color:var(--paper);font-size:30px}
+.name.add{border-style:dashed;color:var(--muted)}.name.add .ini{background:var(--bg);color:var(--muted)}
+.pad{max-width:340px;margin:0 auto;text-align:center}
+.pad h2{font:600 22px/1.25 Lexend,sans-serif;margin:0 0 6px}
+.dots{display:flex;justify-content:center;gap:16px;margin:18px 0 6px}
+.dots span{width:18px;height:18px;border-radius:50%;border:2px solid var(--accent)}.dots span.on{background:var(--accent)}
+.pinin{position:absolute;opacity:0;width:1px;height:1px}
+#addF2 .pinin{position:static;opacity:1;width:100%;height:auto;font:inherit;font-size:18px;padding:10px 12px;border:2px solid var(--line);border-radius:10px;background:var(--paper);color:var(--ink)}
+.padmsg{min-height:1.5em;color:var(--bad);font-weight:700;margin:4px 0 10px}
+.keys{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.key{min-height:60px;border:2px solid var(--line);border-radius:14px;background:var(--paper);font:600 24px Lexend,sans-serif}
+.key:active{background:var(--sel)}.key.sm{font-size:15px}
 .thb{display:inline-flex;align-items:center;gap:6px}
 .hhead{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
 .note{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:10px 14px;font-size:15px}
@@ -262,7 +279,8 @@ let S=ls.get("g4p",{students:{},prog:{}});            // local mirror
 let mode="loading", isOwner=true, CFG=ls.get("g4cfg",null);
 { const m=location.hash.match(/^#connect=([^~]+)~(.+)$/); if(m){ try{CFG={url:decodeURIComponent(m[1]),code:decodeURIComponent(m[2])}; ls.set("g4cfg",CFG);}catch(e){} history.replaceState(null,"",location.pathname); } }
 addEventListener("hashchange",()=>{ if(/^#connect=/.test(location.hash)) location.reload(); });
-let sid=ls.get("g4sid",null);
+let auth=ls.get("g4auth",null), pinsOn=false;
+let sid=auth&&auth.sid||null;
 let T=null, st=null, cur=0, N=0, W=0, armed=false, view="home", dashSid=null;
 const key=(s,t)=>s+"__"+t;
 const prog=(s,t)=>{S.prog[s]=S.prog[s]||{}; return S.prog[s][t]||(S.prog[s][t]=fresh());};
@@ -307,7 +325,7 @@ function summ(s,t,b){const T0=TESTS.find(x=>x.id===t); return {student:(S.studen
 async function pull(){
   const r=await fetch(CFG.url+"?code="+encodeURIComponent(CFG.code)+"&t="+Date.now()); const j=await r.json();
   if(!j.ok){const e=new Error(j.error); e.code=j.error; throw e;}
-  const m={}; (j.students||[]).forEach(v=>{ if(v&&v.id&&v.name) m[v.id]={name:String(v.name).slice(0,40),created:+v.created||0}; }); S.students=m;
+  const m={}; (j.students||[]).forEach(v=>{ if(v&&v.id&&v.name) m[v.id]={name:String(v.name).slice(0,40),created:+v.created||0,hasPin:!!v.hasPin}; }); S.students=m; pinsOn=!!j.pins;
   (j.progress||[]).forEach(v=>{ if(!v||!v.sid||!v.tid||!TESTS.some(x=>x.id===v.tid)) return; const k=key(v.sid,v.tid);
     if(T&&st&&k===key(sid,T.id)&&view==="test") return;
     if(pend.has(k)||busy.has(k)) return;
@@ -328,53 +346,130 @@ async function connect(){
 
 function rerender(){ paintThemeButtons(); showSave(); if(view==="home") home(); else if(view==="dash") dash(); }
 
-/* ---------- students ---------- */
+/* ---------- students & log in ---------- */
 function students(){ const m=S.students||{}; return Object.entries(m).sort((a,b)=>(a[1].created||0)-(b[1].created||0)); }
-async function addStudent(name){
-  name=name.trim().slice(0,40); if(!name) return;
-  const id="s"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
-  S.students[id]={name,created:Date.now()}; sid=id; ls.set("g4sid",sid); persistLocal();
-  if(CFG){ try{ await api("student",{id,name}); }catch(e){ alertBar("Couldn’t save the new name to the Google Sheet. It is saved on this device."); } }
-  home();
+function ensureStudent(){ if(sid&&S.students[sid]) return sid; if(auth&&S.students[auth.sid]){sid=auth.sid; return sid;} sid=null; return null; }
+function logIn(id){ auth={sid:id,at:Date.now()}; ls.set("g4auth",auth); sid=id; closeOv(); home(); }
+function logOut(){ if(T&&st) save(); if(CFG) flush(); auth=null; ls.set("g4auth",null); sid=null; home(); }
+const pinOnline=()=>mode==="online"&&CFG&&pinsOn;
+async function sha(s){ try{ const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(s)); return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join(""); }catch(e){ return null; } }
+async function rememberPin(id,pin){ const h=await sha("g4local:"+id+":"+pin); if(h){ const v=ls.get("g4pinv",{}); v[id]=h; ls.set("g4pinv",v);} }
+
+/* PIN pad: kind = "enter" | "create" | "confirm" | "new" (add student) */
+let pad={kind:"enter",id:null,pin:"",first:"",name:"",msg:""};
+function padOpen(kind,id,extra={}){ pad={kind,id,pin:"",first:"",name:"",msg:"",...extra}; padDraw(); $("ov").classList.add("open"); setTimeout(()=>{const i=$("pinIn"); if(i) i.focus();},50); }
+function padDraw(){
+  const nm=pad.id&&S.students[pad.id]?esc(S.students[pad.id].name):esc(pad.name);
+  const title={enter:`Hi ${nm}! Enter your PIN`, create:`Hi ${nm}! Make a 4-digit PIN`, confirm:"Type your new PIN again", newconfirm:"Type the PIN again", new:`Make a 4-digit PIN for ${nm}`}[pad.kind];
+  const sub={enter:"", create:"You’ll use it every time you log in. Don’t share it.", confirm:"", newconfirm:"", new:"You’ll use it every time you log in."}[pad.kind];
+  $("md").innerHTML=`<div class="pad"><h2>${title}</h2>${sub?`<p class="kl">${sub}</p>`:""}
+   <div class="dots" aria-hidden="true">${[0,1,2,3].map(i=>`<span class="${i<pad.pin.length?"on":""}"></span>`).join("")}</div>
+   <input id="pinIn" class="pinin" inputmode="numeric" autocomplete="off" maxlength="4" aria-label="PIN" value="${pad.pin}">
+   <p class="padmsg" role="alert">${pad.msg}</p>
+   <div class="keys">${[1,2,3,4,5,6,7,8,9].map(n=>`<button class="key" data-k="${n}">${n}</button>`).join("")}<button class="key sm" data-k="x">Cancel</button><button class="key" data-k="0">0</button><button class="key sm" data-k="b" aria-label="Delete">⌫</button></div></div>`;
+  const i=$("pinIn"); i.oninput=()=>{pad.pin=i.value.replace(/\D/g,"").slice(0,4); padDraw(); $("pinIn").focus(); if(pad.pin.length===4) padDone();};
 }
-function ensureStudent(){ if(!sid||!S.students[sid]){ const s=students(); sid=s.length?s[0][0]:null; ls.set("g4sid",sid);} return sid; }
+async function padDone(){
+  const id=pad.id, pin=pad.pin;
+  if(pad.kind==="create"||pad.kind==="new"){ pad.first=pin; pad.kind=pad.kind==="new"?"newconfirm":"confirm"; pad.pin=""; pad.msg=""; padDraw2(); return; }
+  if(pad.kind==="confirm"||pad.kind==="newconfirm"){
+    if(pin!==pad.first){ const k=pad.kind==="newconfirm"?"new":"create"; pad.kind=k; pad.pin=""; pad.first=""; pad.msg="Those didn’t match. Let’s try again."; padDraw(); return; }
+    if(pad.kind==="newconfirm") return finishAdd(pad.name,pin);
+    pad.msg="Saving…"; padDraw();
+    try{ if(pinOnline()) await api("setPin",{id,pin}); S.students[id].hasPin=true; await rememberPin(id,pin); logIn(id); }
+    catch(e){ pad.pin=""; pad.msg= e&&e.code==="has_pin"?"This student already has a PIN.":"Couldn’t save the PIN. Check the internet and try again."; padDraw(); }
+    return;
+  }
+  // enter
+  pad.msg="Checking…"; padDraw();
+  if(pinOnline()){
+    try{ const r=await api("login",{id,pin}); if(r.needPin){ padOpen("create",id); return; } await rememberPin(id,pin); return logIn(id); }
+    catch(e){
+      if(e&&e.code==="bad_pin"){ pad.pin=""; pad.msg="That PIN isn’t right. Try again."; padDraw(); return; }
+      if(e&&e.code==="locked"){ pad.pin=""; pad.msg="Too many tries. Wait 10 minutes or ask a parent."; padDraw(); return; }
+      // network trouble: fall through to this device's saved check
+    }
+  }
+  const v=ls.get("g4pinv",{})[id], h=await sha("g4local:"+id+":"+pin);
+  if(v&&h&&v===h) return logIn(id);
+  pad.pin=""; pad.msg= v?"That PIN isn’t right. Try again.":"Can’t check your PIN without the internet right now."; padDraw();
+}
+const padDraw2=()=>padDraw();
+$("md").addEventListener("click",e=>{ const b=e.target.closest(".key"); if(!b) return; const k=b.dataset.k;
+  if(k==="x"){ closeOv(); return; } if(k==="b"){ pad.pin=pad.pin.slice(0,-1); pad.msg=""; }
+  else if(pad.pin.length<4){ pad.pin+=k; }
+  const again=pad.kind==="confirm"||pad.kind==="newconfirm"; again?padDraw2():padDraw(); $("pinIn").focus();
+  if(pad.pin.length===4) padDone();
+});
+function tapName(id){
+  const s=S.students[id]; if(!s) return;
+  if(!pinOnline()){ const v=ls.get("g4pinv",{})[id]; if(v) return padOpen("enter",id);
+    if(mode==="offline"&&s.hasPin){ alertBar("Can’t check PINs without the internet. Try again in a moment."); return; }
+    return logIn(id); }   // no PINs available here: name only
+  if(!s.hasPin) return padOpen("create",id);
+  padOpen("enter",id);
+}
+function addForm(){
+  $("md").innerHTML=`<form id="addF2" class="pad"><h2>Add a student</h2><label class="kl" for="addN2">First name</label>
+   <input id="addN2" class="pinin" style="letter-spacing:0;text-align:left" maxlength="40" autocomplete="off">
+   <div class="row" style="justify-content:flex-end;margin-top:14px"><button type="button" class="btn ghost" data-close>Cancel</button><button class="btn" type="submit">Next</button></div></form>`;
+  $("ov").classList.add("open"); $("addN2").focus();
+  $("addF2").onsubmit=e=>{ e.preventDefault(); const n=$("addN2").value.trim().slice(0,40); if(!n) return;
+    if(pinOnline()) padOpen("new",null,{name:n}); else finishAdd(n,null); };
+}
+async function finishAdd(name,pin){
+  const id="s"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+  S.students[id]={name,created:Date.now(),hasPin:!!pin}; persistLocal();
+  if(CFG){ try{ await api("student",pin?{id,name,pin}:{id,name}); }catch(e){ alertBar("Couldn’t save the new name to the Google Sheet. It is saved on this device."); } }
+  if(pin) await rememberPin(id,pin);
+  logIn(id);
+}
 
 /* ---------- menu ---------- */
 function scoreOf(t,s){return t.q.filter((q,i)=>isRight(q,s.ans[i])).length;}
-function home(){
-  view="home"; T=null; st=null; $("app").hidden=true; $("dash").hidden=true; $("home").hidden=false; stopReader(); location.hash="";
-  ensureStudent();
-  const list=students(), name=sid?S.students[sid].name:"";
-  const old=ls.get("g4tests",null), oldN=old?Object.keys(old).filter(k=>old[k]&&(old[k].done||Object.keys(old[k].ans||{}).length)).length:0;
-  const migr = oldN && sid && !ls.get("g4migr",false);
-  $("home").innerHTML=`<div class="hhead"><div><h1>Grade 4 Reading &amp; Writing Practice</h1>
-  <p class="lead">Six practice tests in the style of Florida’s computer-based reading test. Each has two passages with different text structures, reading questions, and a writing task that uses both passages.</p></div>
-  <div class="row"><button class="btn ghost themebtn"></button>${isOwner&&mode==="online"?`<button class="btn" id="toDash">Progress dashboard</button>`:""}</div></div>
+function notesHTML(){ return `
   <div class="bar" id="bar" hidden></div>
   ${mode==="loading"?`<p class="note">Connecting to saved progress…</p>`:""}
   ${mode==="local"?`<div class="note warn">Progress is being saved <b>on this device only</b>. <button class="lnk" id="setupBtn">Connect a Google Sheet</button> to save online and use the dashboard.</div>`:""}
   ${mode==="offline"?`<p class="note warn">Can’t reach the Google Sheet right now. Answers are kept on this device and will upload when the connection is back.</p>`:""}
   ${mode==="badcode"?`<div class="note warn">The family code doesn’t match the Google Sheet. <button class="lnk" id="setupBtn">Fix the connection</button></div>`:""}
+  ${mode==="online"&&!pinsOn?`<p class="note">PIN log-in turns on after the Google Sheet script is updated.</p>`:""}
   <div id="setup" hidden class="box" style="margin:0 0 18px"><h2 class="bh">Connect a Google Sheet</h2>
    <p class="kl" style="margin-top:0">Paste the Web app URL from Google Apps Script and your family code. See the setup guide in the README.</p>
    <form id="setupF" class="plan"><label for="cfgU">Web app URL</label><input id="cfgU" placeholder="https://script.google.com/macros/s/…/exec" value="${esc(CFG&&CFG.url||"")}">
    <label for="cfgC">Family code</label><input id="cfgC" value="${esc(CFG&&CFG.code||"")}">
-   <div class="row" style="margin-top:6px"><button class="btn" type="submit">Connect</button><span id="cfgMsg" class="kl"></span></div></form></div>
-  <section class="who"><h2>Who’s practicing?</h2><div class="chips">${list.map(([id,s])=>`<button class="chip" data-sid="${id}" aria-pressed="${id===sid}">${esc(s.name)}</button>`).join("")}
-    <form id="addf" class="addf"><input id="addn" maxlength="40" placeholder="${list.length?"Add another student":"Type a student’s first name"}" aria-label="Student name"><button class="btn ghost" type="submit">Add</button></form></div>
-    ${migr?`<p class="note">Answers from earlier (${oldN} test${oldN>1?"s":""}) are saved on this device. <button class="btn ghost" id="migr">Add them to ${esc(name)}’s progress</button></p>`:""}</section>
-  ${!sid?`<p class="note">Add a student name above to begin.</p>`:`
-  <div class="legend"><span class="lv lv1">Level 1 · On level</span><span class="lv lv2">Level 2 · Challenge</span><span class="lv lv3">Level 3 · Advanced</span></div>
-  <div class="cards">${TESTS.map(t=>{const s=S.prog[sid]&&S.prog[sid][t.id]; let stat="Not started", btns=`<button class="btn" data-start="${t.id}">Start test</button>`;
-    if(s&&s.done){stat=`Finished · <b>${scoreOf(t,s)} / ${t.q.length}</b> reading`+(wtotal(s)!=="–"?` · <b>${wtotal(s)} / 12</b> writing`:"");
-      btns=`<button class="btn" data-res="${t.id}">See results</button><button class="btn ghost" data-retake="${t.id}">Retake</button>`;}
-    else if(has(sid,t.id)){stat=`In progress · ${Object.keys(s.ans).length} of ${t.q.length} answered`;btns=`<button class="btn" data-start="${t.id}">Continue</button><button class="btn ghost" data-retake="${t.id}">Start over</button>`;}
-    return `<article class="card"><div class="top1"><span class="tn">Test ${t.num}</span><span class="lv lv${t.level}">${LV[t.level]}</span></div>
-    <h2>${t.name}</h2><p class="tp">${t.topic}</p>
-    <ul>${t.p.map((p,k)=>`<li><b>Passage ${k+1}:</b> ${p.title} <span style="color:var(--muted)">· ${p.structure}</span></li>`).join("")}<li><b>Writing:</b> ${t.w.mode} essay · ${t.q.length} reading questions</li></ul>
-    <p class="stat">${stat}</p><div class="row">${btns}</div></article>`;}).join("")}</div>`}`;
+   <div class="row" style="margin-top:6px"><button class="btn" type="submit">Connect</button><span id="cfgMsg" class="kl"></span></div></form></div>`; }
+function home(){
+  view="home"; T=null; st=null; $("app").hidden=true; $("dash").hidden=true; $("home").hidden=false; stopReader(); location.hash="";
+  if(auth&&mode!=="loading"&&!S.students[auth.sid]&&students().length){ auth=null; ls.set("g4auth",null); }
+  sid = auth&&S.students[auth.sid] ? auth.sid : null;
+  const list=students();
+  if(!sid){
+    $("home").innerHTML=`<div class="hhead"><div><h1>Grade 4 Reading &amp; Writing Practice</h1>
+    <p class="lead">Six practice tests in the style of Florida’s computer-based reading test.</p></div>
+    <div class="row"><button class="btn ghost themebtn"></button>${isOwner&&mode==="online"?`<button class="btn ghost" id="toDash">Parent dashboard</button>`:""}</div></div>
+    ${notesHTML()}
+    <section class="login"><h2>Who’s practicing today?</h2>
+    <div class="names">${list.map(([id,s])=>`<button class="name" data-login="${id}"><span class="ini">${esc(s.name.slice(0,1).toUpperCase())}</span><span>${esc(s.name)}</span></button>`).join("")}
+      <button class="name add" id="addStu"><span class="ini">+</span><span>Add student</span></button></div>
+    ${list.length?`<p class="kl">Tap your name, then type your PIN.</p>`:`<p class="kl">Add a student to begin.</p>`}</section>`;
+  } else {
+    const name=S.students[sid].name;
+    $("home").innerHTML=`<div class="hhead"><div><h1>Hi, ${esc(name)}!</h1>
+    <p class="lead">Pick a test. Your answers save as you go, so you can stop and come back anytime.</p></div>
+    <div class="row"><button class="btn ghost themebtn"></button><button class="btn" id="logOut">Log out</button></div></div>
+    ${notesHTML()}
+    <div class="legend"><span class="lv lv1">Level 1 · On level</span><span class="lv lv2">Level 2 · Challenge</span><span class="lv lv3">Level 3 · Advanced</span></div>
+    <div class="cards">${TESTS.map(t=>{const s=S.prog[sid]&&S.prog[sid][t.id]; let stat="Not started", btns=`<button class="btn" data-start="${t.id}">Start test</button>`;
+      if(s&&s.done){stat=`Finished · <b>${scoreOf(t,s)} / ${t.q.length}</b> reading`+(wtotal(s)!=="–"?` · <b>${wtotal(s)} / 12</b> writing`:"");
+        btns=`<button class="btn" data-res="${t.id}">See results</button><button class="btn ghost" data-retake="${t.id}">Retake</button>`;}
+      else if(has(sid,t.id)){stat=`In progress · ${Object.keys(s.ans).length} of ${t.q.length} answered`;btns=`<button class="btn" data-start="${t.id}">Continue</button><button class="btn ghost" data-retake="${t.id}">Start over</button>`;}
+      return `<article class="card"><div class="top1"><span class="tn">Test ${t.num}</span><span class="lv lv${t.level}">${LV[t.level]}</span></div>
+      <h2>${t.name}</h2><p class="tp">${t.topic}</p>
+      <ul>${t.p.map((p,k)=>`<li><b>Passage ${k+1}:</b> ${p.title} <span style="color:var(--muted)">· ${p.structure}</span></li>`).join("")}<li><b>Writing:</b> ${t.w.mode} essay · ${t.q.length} reading questions</li></ul>
+      <p class="stat">${stat}</p><div class="row">${btns}</div></article>`;}).join("")}</div>`;
+  }
   paintThemeButtons();
-  $("addf").onsubmit=e=>{e.preventDefault(); addStudent($("addn").value);};
   const sf=$("setupF"); if(sf) sf.onsubmit=async e=>{e.preventDefault(); const u=$("cfgU").value.trim(), c=$("cfgC").value.trim();
     if(!/^https:\/\/script\.google(usercontent)?\.com\//.test(u)||!c){$("cfgMsg").textContent="Check the URL and code."; return;}
     $("cfgMsg").textContent="Connecting…"; const old=CFG; CFG={url:u,code:c};
@@ -383,9 +478,11 @@ function home(){
 }
 $("home").addEventListener("click",e=>{const b=e.target.closest("button"); if(!b) return;
   if(b.id==="setupBtn"){ $("setup").hidden=false; $("cfgU").focus(); return; }
-  if(b.dataset.sid){sid=b.dataset.sid; ls.set("g4sid",sid); home();}
+  if(b.dataset.login) tapName(b.dataset.login);
+  else if(b.id==="addStu") addForm();
+  else if(b.id==="logOut") logOut();
   else if(b.id==="toDash") dash();
-  else if(b.id==="migr"){const old=ls.get("g4tests",{}); for(const t in old){ if(!has(sid,t)&&old[t]){S.prog[sid]=S.prog[sid]||{}; S.prog[sid][t]={...fresh(),...old[t]}; saveFor(sid,t);} } ls.set("g4migr",true); home();}
+  else if(!sid) return;
   else if(b.dataset.start) open(b.dataset.start);
   else if(b.dataset.res){open(b.dataset.res); results();}
   else if(b.dataset.retake){ if(b.dataset.armed){S.prog[sid][b.dataset.retake]=fresh(); saveFor(sid,b.dataset.retake); open(b.dataset.retake);} else {b.dataset.armed=1; b.textContent="Click again to erase answers";}}

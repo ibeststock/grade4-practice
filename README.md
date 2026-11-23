@@ -34,4 +34,10 @@ Without this step, progress saves only in the browser on each device.
 
 **What gets saved:** student first names, answers, essays, highlights, time spent, and scores. Saved data goes only to your Google Sheet. The Progress tab is easy to read in the Sheet itself.
 
+## Student log-in
+
+Each student taps their name and types a 4-digit PIN. The first time, they create the PIN. PINs are stored in the Students tab as scrambled codes, never as the real digits. After 10 wrong tries, that student is locked out for 10 minutes.
+
+**Forgot a PIN?** Open the Google Sheet, go to the Students tab, and clear that student's cell in the `pin` column. Next time, they'll make a new PIN.
+
 **Updating the script later:** after editing `Code.gs`, use **Deploy → Manage deployments → Edit → Version: New version**. This keeps the same URL.
