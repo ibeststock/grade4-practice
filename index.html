@@ -206,15 +206,24 @@ main.split.solo #right{max-width:900px;width:100%;margin:0 auto}
 .numin:focus{border-color:var(--accent);outline:none}
 .unit{font-size:17px;color:var(--muted)}
 .numres{background:var(--bg);border-radius:8px;padding:8px 12px}
-.pick2{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px;margin-top:6px}
-.subjbtn{display:flex;flex-direction:column;align-items:flex-start;gap:8px;text-align:left;padding:28px 26px;border:2px solid var(--line);border-radius:20px;background:var(--paper);min-height:230px;transition:transform .12s,border-color .12s}
-.subjbtn:hover{border-color:var(--accent);transform:translateY(-2px)}
-@media(prefers-reduced-motion:reduce){.subjbtn{transition:none}.subjbtn:hover{transform:none}}
-.sico{width:72px;height:72px;border-radius:18px;display:grid;place-items:center;font:600 28px Lexend,sans-serif;color:#fff}
-.s-reading .sico{background:#0f766e}.s-math .sico{background:#7a4fc9}
-.stitle{font:600 26px/1.15 Lexend,sans-serif;color:var(--ink)}
-.sblurb{font-size:16px;color:var(--muted)}
-.sprog{margin-top:auto;font:600 14px Lexend,sans-serif;color:var(--accent)}
+.pickhead{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;font-size:17px}
+.pickwrap{min-height:calc(100vh - 150px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px;padding:10px 0 30px}
+.pickq{font:600 clamp(28px,4.5vw,44px)/1.1 Lexend,sans-serif;text-align:center;margin:0;text-wrap:balance}
+.pick2{display:flex;gap:clamp(18px,4vw,44px);justify-content:center;flex-wrap:wrap;width:100%}
+.subjbtn{position:relative;width:min(340px,100%);display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;padding:26px 24px 22px;border:0;border-radius:32px;color:#fff;
+  box-shadow:0 10px 0 rgba(0,0,0,.18),0 18px 34px rgba(0,0,0,.16);transition:transform .15s ease,box-shadow .15s ease}
+.subjbtn:hover,.subjbtn:focus-visible{transform:translateY(-6px) rotate(-1deg);box-shadow:0 16px 0 rgba(0,0,0,.16),0 26px 40px rgba(0,0,0,.2)}
+.subjbtn.s-math:hover,.subjbtn.s-math:focus-visible{transform:translateY(-6px) rotate(1deg)}
+.subjbtn:active{transform:translateY(2px);box-shadow:0 4px 0 rgba(0,0,0,.2)}
+@media(prefers-reduced-motion:reduce){.subjbtn,.subjbtn:hover{transition:none;transform:none}}
+.s-reading{background:linear-gradient(160deg,#18a093,#0b5d57)}
+.s-math{background:linear-gradient(160deg,#8f5cf0,#5a2fb0)}
+.sart{width:190px;height:auto;margin:4px 0 6px;filter:drop-shadow(0 4px 6px rgba(0,0,0,.15))}
+.stitle{font:600 30px/1.1 Lexend,sans-serif}
+.sblurb{font-size:16px;opacity:.92}
+.sprog{font:600 13.5px Lexend,sans-serif;background:rgba(255,255,255,.2);padding:4px 12px;border-radius:14px;margin-top:6px}
+.sgo{font:600 18px Lexend,sans-serif;background:#fff;color:#0b5d57;padding:10px 22px;border-radius:24px;margin-top:12px}
+.s-math .sgo{color:#5a2fb0}
 .lnk.back{font-size:15px;margin:0 0 6px;text-decoration:none}
 .thb{display:inline-flex;align-items:center;gap:6px}
 .hhead{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
@@ -501,12 +510,15 @@ function home(){
   } else {
     const name=S.students[sid].name;
     if(!subj){
-      const blurb={reading:"Read two passages, answer questions, and write an essay.", math:"Numbers, fractions, geometry, measurement and data."};
-      $("home").innerHTML=`<div class="hhead"><div><h1>Hi, ${esc(name)}!</h1><p class="lead">What do you want to practice today?</p></div>
-      <div class="row"><button class="btn ghost themebtn"></button><button class="btn" id="logOut">Log out</button></div></div>
+      const ART={
+        reading:`<svg viewBox="0 0 160 120" class="sart" aria-hidden="true"><path d="M80 30 C60 18 34 16 14 22 V100 C34 94 60 96 80 108 Z" fill="#fff" opacity=".95"/><path d="M80 30 C100 18 126 16 146 22 V100 C126 94 100 96 80 108 Z" fill="#fff" opacity=".82"/><path d="M80 30 V108" stroke="#0b5d57" stroke-width="3"/>${[40,52,64,76].map(y=>`<path d="M26 ${y} C42 ${y-4} 58 ${y-2} 70 ${y+3}" stroke="#7cc8bd" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M90 ${y+3} C102 ${y-2} 118 ${y-4} 134 ${y}" stroke="#7cc8bd" stroke-width="4" fill="none" stroke-linecap="round"/>`).join("")}<path d="M118 4 l4 9 9 4 -9 4 -4 9 -4 -9 -9 -4 9 -4z" fill="#ffd84a"/><path d="M30 2 l3 6 6 3 -6 3 -3 6 -3 -6 -6 -3 6 -3z" fill="#ffd84a"/></svg>`,
+        math:`<svg viewBox="0 0 160 120" class="sart" aria-hidden="true"><rect x="12" y="44" width="54" height="54" rx="10" fill="#fff" opacity=".95"/><text x="39" y="82" text-anchor="middle" font-family="Lexend,sans-serif" font-weight="700" font-size="30" fill="#6a3fc0">7</text><circle cx="104" cy="44" r="30" fill="#ffd84a"/><path d="M104 44 L104 14 A30 30 0 0 1 134 44 Z" fill="#ff8a3d"/><path d="M84 104 L112 60 L140 104 Z" fill="#fff" opacity=".9"/><text x="112" y="98" text-anchor="middle" font-family="Lexend,sans-serif" font-weight="700" font-size="20" fill="#6a3fc0">×</text><text x="34" y="30" text-anchor="middle" font-family="Lexend,sans-serif" font-weight="700" font-size="26" fill="#fff">+</text><text x="146" y="20" text-anchor="middle" font-family="Lexend,sans-serif" font-weight="700" font-size="18" fill="#fff" opacity=".85">½</text></svg>`};
+      const blurb={reading:"Stories, articles, poems and essays", math:"Numbers, fractions, shapes and data"};
+      $("home").innerHTML=`<div class="pickhead"><span class="kl">Hi, <b>${esc(name)}</b>!</span><div class="row"><button class="btn ghost themebtn"></button><button class="btn" id="logOut">Log out</button></div></div>
       ${notesHTML()}
+      <section class="pickwrap"><h1 class="pickq">What do you want to practice?</h1>
       <div class="pick2">${Object.entries(SUBJ).map(([k,v])=>{const tl=TESTS.filter(t=>subjOf(t)===k), fin=tl.filter(t=>S.prog[sid]&&S.prog[sid][t.id]&&S.prog[sid][t.id].done).length, inp=tl.filter(t=>has(sid,t.id)&&!S.prog[sid][t.id].done).length;
-        return `<button class="subjbtn s-${k}" data-subj="${k}"><span class="sico" aria-hidden="true">${k==="math"?"½ ×":"Aa"}</span><span class="stitle">${v}</span><span class="sblurb">${blurb[k]}</span><span class="sprog">${fin} of ${tl.length} finished${inp?` · ${inp} in progress`:""}</span></button>`;}).join("")}</div>`;
+        return `<button class="subjbtn s-${k}" data-subj="${k}">${ART[k]}<span class="stitle">${v}</span><span class="sblurb">${blurb[k]}</span><span class="sprog">${fin} of ${tl.length} done${inp?` · ${inp} started`:""}</span><span class="sgo" aria-hidden="true">Let’s go ➜</span></button>`;}).join("")}</div></section>`;
       paintThemeButtons(); return;
     }
     $("home").innerHTML=`<div class="hhead"><div><button class="lnk back" id="toSubj">◀ Choose a subject</button><h1>${SUBJ[subj]}</h1>
