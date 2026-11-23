@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Grade 4 Practice Tests</title>
 <meta name="robots" content="noindex">
+<script>try{const t=localStorage.getItem("g4theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t;}catch(e){}</script>
 <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Lexend:wght@500;600&display=swap" rel="stylesheet">
 <style>
 /* VOICE: calm, clear computer-based test player for a 9-year-old
@@ -167,6 +168,7 @@ summary{font-weight:700;cursor:pointer;min-height:32px}
 .rub th,.rub td{border:1px solid var(--line);padding:6px 8px;vertical-align:top;text-align:left}
 .rub select{padding:4px;font-size:16px}
 .essay{white-space:pre-wrap;background:var(--bg);border-radius:8px;padding:12px;font-size:15px}
+.thb{display:inline-flex;align-items:center;gap:6px}
 .hhead{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
 .note{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:10px 14px;font-size:15px}
 .note.warn,.bar{background:light-dark(#fff4d6,#3a2e0e);border:1px solid #e0b84c;border-radius:10px;padding:10px 14px;font-size:15px;margin:0 0 14px}
@@ -214,6 +216,7 @@ summary{font-weight:700;cursor:pointer;min-height:32px}
   </span>
   <button class="tool" id="tLr" aria-pressed="false" title="Line reader: use ↑ ↓ keys or move the mouse">Line reader</button>
   <span id="lrb" hidden><button class="tool" id="lrUp" aria-label="Line up">▲</button> <button class="tool" id="lrDn" aria-label="Line down">▼</button></span>
+  <button class="tool themebtn" id="tTheme" title="Switch between light and dark"></button>
   <button class="tool" id="tZo" title="Smaller text">A−</button>
   <button class="tool" id="tZi" title="Bigger text">A+</button>
   <span class="sv" id="sv"></span>
@@ -245,6 +248,14 @@ const $=id=>document.getElementById(id);
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const fresh=()=>({ans:{},fl:{},x:{},essay:"",plan:{},t:0,done:false,rub:{},hl:{},updated:0});
 const ls={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}};
+
+/* ---------- light / dark ---------- */
+const darkNow=()=>{const t=document.documentElement.dataset.theme; return t?t==="dark":matchMedia("(prefers-color-scheme: dark)").matches;};
+const themeLabel=()=>darkNow()?"☀ Light":"☾ Dark";
+function toggleTheme(){ const next=darkNow()?"light":"dark"; document.documentElement.dataset.theme=next; try{localStorage.setItem("g4theme",next);}catch(e){} paintThemeButtons(); }
+function paintThemeButtons(){ document.querySelectorAll(".themebtn").forEach(b=>{b.textContent=themeLabel(); b.setAttribute("aria-label",darkNow()?"Switch to light background":"Switch to dark background");}); }
+document.addEventListener("click",e=>{ if(e.target.closest(".themebtn")) toggleTheme(); });
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change",paintThemeButtons);
 
 /* ---------- store: online (db) when available, this device otherwise ---------- */
 let S=ls.get("g4p",{students:{},prog:{}});            // local mirror
@@ -315,7 +326,7 @@ async function connect(){
     if(view==="dash"||view==="home"){ try{ await pull(); rerender(); }catch(e){} } },30000);
 })();
 
-function rerender(){ showSave(); if(view==="home") home(); else if(view==="dash") dash(); }
+function rerender(){ paintThemeButtons(); showSave(); if(view==="home") home(); else if(view==="dash") dash(); }
 
 /* ---------- students ---------- */
 function students(){ const m=S.students||{}; return Object.entries(m).sort((a,b)=>(a[1].created||0)-(b[1].created||0)); }
@@ -338,7 +349,7 @@ function home(){
   const migr = oldN && sid && !ls.get("g4migr",false);
   $("home").innerHTML=`<div class="hhead"><div><h1>Grade 4 Reading &amp; Writing Practice</h1>
   <p class="lead">Six practice tests in the style of Florida’s computer-based reading test. Each has two passages with different text structures, reading questions, and a writing task that uses both passages.</p></div>
-  ${isOwner&&mode==="online"?`<button class="btn" id="toDash">Progress dashboard</button>`:""}</div>
+  <div class="row"><button class="btn ghost themebtn"></button>${isOwner&&mode==="online"?`<button class="btn" id="toDash">Progress dashboard</button>`:""}</div></div>
   <div class="bar" id="bar" hidden></div>
   ${mode==="loading"?`<p class="note">Connecting to saved progress…</p>`:""}
   ${mode==="local"?`<div class="note warn">Progress is being saved <b>on this device only</b>. <button class="lnk" id="setupBtn">Connect a Google Sheet</button> to save online and use the dashboard.</div>`:""}
@@ -362,6 +373,7 @@ function home(){
     <h2>${t.name}</h2><p class="tp">${t.topic}</p>
     <ul>${t.p.map((p,k)=>`<li><b>Passage ${k+1}:</b> ${p.title} <span style="color:var(--muted)">· ${p.structure}</span></li>`).join("")}<li><b>Writing:</b> ${t.w.mode} essay · ${t.q.length} reading questions</li></ul>
     <p class="stat">${stat}</p><div class="row">${btns}</div></article>`;}).join("")}</div>`}`;
+  paintThemeButtons();
   $("addf").onsubmit=e=>{e.preventDefault(); addStudent($("addn").value);};
   const sf=$("setupF"); if(sf) sf.onsubmit=async e=>{e.preventDefault(); const u=$("cfgU").value.trim(), c=$("cfgC").value.trim();
     if(!/^https:\/\/script\.google(usercontent)?\.com\//.test(u)||!c){$("cfgMsg").textContent="Check the URL and code."; return;}
@@ -384,9 +396,9 @@ const fmtD=ms=>ms?new Date(ms).toLocaleDateString([], {month:"short",day:"numeri
 function dash(){
   view="dash"; T=null; st=null; $("home").hidden=true; $("app").hidden=true; $("dash").hidden=false; location.hash="dashboard";
   const list=students(); if(!dashSid||!S.students[dashSid]) dashSid=sid&&S.students[sid]?sid:(list[0]||[])[0];
-  let h=`<div class="hhead"><div><h1>Progress dashboard</h1><p class="lead">Progress for each student, saved in your Google Sheet. Refreshes every 30 seconds.</p></div><button class="btn ghost" data-home>◀ All tests</button></div>
+  let h=`<div class="hhead"><div><h1>Progress dashboard</h1><p class="lead">Progress for each student, saved in your Google Sheet. Refreshes every 30 seconds.</p></div><div class="row"><button class="btn ghost themebtn"></button><button class="btn ghost" data-home>◀ All tests</button></div></div>
   <div class="bar" id="bar" hidden></div>`;
-  if(!list.length){ $("dash").innerHTML=h+`<p class="note">No students yet. Add a name on the tests page.</p>`; return; }
+  if(!list.length){ $("dash").innerHTML=h+`<p class="note">No students yet. Add a name on the tests page.</p>`; paintThemeButtons(); return; }
   h+=`<div class="chips" style="margin-bottom:16px">${list.map(([id,s])=>`<button class="chip" data-dsid="${id}" aria-pressed="${id===dashSid}">${esc(s.name)}</button>`).join("")}</div>`;
   const P=S.prog[dashSid]||{}, fin=TESTS.filter(t=>P[t.id]&&P[t.id].done);
   const pct=fin.length?Math.round(fin.reduce((a,t)=>a+scoreOf(t,P[t.id])/t.q.length,0)/fin.length*100):null;
@@ -408,7 +420,7 @@ function dash(){
   <div class="box" style="margin-top:14px"><h2 class="bh">Use the tests on another device</h2><p class="kl" style="margin-top:0">Open this setup link once on the other device (for example, a tablet). It saves the connection there.</p>
   <div class="row"><input id="devLink" readonly value="${esc(location.origin+location.pathname+"#connect="+encodeURIComponent(CFG.url)+"~"+encodeURIComponent(CFG.code))}" style="flex:1;min-width:0;font-size:14px;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)"><button class="btn ghost sm" id="cpLink">Copy link</button></div></div>
   <p class="kl" style="margin-top:18px">Remove this student’s name from the list: <button class="lnk" data-rm="${dashSid}">Remove ${esc(S.students[dashSid].name)}</button> (saved answers are kept).</p>`;
-  $("dash").innerHTML=h;
+  $("dash").innerHTML=h; paintThemeButtons();
 }
 $("dash").addEventListener("click",async e=>{const b=e.target.closest("button"); if(!b) return;
   if(b.hasAttribute("data-home")) home();
@@ -685,6 +697,7 @@ $("repin").addEventListener("click",e=>{const b=e.target.closest("button"); if(!
 });
 $("repin").addEventListener("change",e=>{const s=e.target.closest("select"); if(!s) return; st.rub[s.dataset.r]=s.value; save(); $("wt").textContent=wtotal(st);});
 
+paintThemeButtons();
 const h0=location.hash.slice(1);
 if(h0==="dashboard") home(); else if(TESTS.some(t=>t.id===h0)&&ensureStudent()){open(h0); if(st.done) results();} else home();
 }
