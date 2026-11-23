@@ -206,6 +206,16 @@ main.split.solo #right{max-width:900px;width:100%;margin:0 auto}
 .numin:focus{border-color:var(--accent);outline:none}
 .unit{font-size:17px;color:var(--muted)}
 .numres{background:var(--bg);border-radius:8px;padding:8px 12px}
+.pick2{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px;margin-top:6px}
+.subjbtn{display:flex;flex-direction:column;align-items:flex-start;gap:8px;text-align:left;padding:28px 26px;border:2px solid var(--line);border-radius:20px;background:var(--paper);min-height:230px;transition:transform .12s,border-color .12s}
+.subjbtn:hover{border-color:var(--accent);transform:translateY(-2px)}
+@media(prefers-reduced-motion:reduce){.subjbtn{transition:none}.subjbtn:hover{transform:none}}
+.sico{width:72px;height:72px;border-radius:18px;display:grid;place-items:center;font:600 28px Lexend,sans-serif;color:#fff}
+.s-reading .sico{background:#0f766e}.s-math .sico{background:#7a4fc9}
+.stitle{font:600 26px/1.15 Lexend,sans-serif;color:var(--ink)}
+.sblurb{font-size:16px;color:var(--muted)}
+.sprog{margin-top:auto;font:600 14px Lexend,sans-serif;color:var(--accent)}
+.lnk.back{font-size:15px;margin:0 0 6px;text-decoration:none}
 .thb{display:inline-flex;align-items:center;gap:6px}
 .hhead{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
 .note{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:10px 14px;font-size:15px}
@@ -290,7 +300,7 @@ const ls={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;
 /* ---------- subjects & number answers ---------- */
 const SUBJ={reading:"Reading & Writing", math:"Math"};
 const subjOf=t=>t.subject||"reading";
-let subj=ls.get("g4subj","reading"); if(!SUBJ[subj]) subj="reading";
+let subj=ls.get("g4subj",null); if(!SUBJ[subj]) subj=null;   // null = show the subject picker
 function parseNum(s){
   s=String(s==null?"":s).trim().replace(/[,$°]/g,"").replace(/[A-Za-z]+\.?$/,"").trim(); let m;
   if((m=s.match(/^(-?\d+)\s+(\d+)\s*\/\s*(\d+)$/))) return +m[3]?[(+m[1])*(+m[3])+(+m[2]),+m[3]]:null;
@@ -384,8 +394,8 @@ function rerender(){ paintThemeButtons(); showSave(); if(view==="home") home(); 
 /* ---------- students & log in ---------- */
 function students(){ const m=S.students||{}; return Object.entries(m).sort((a,b)=>(a[1].created||0)-(b[1].created||0)); }
 function ensureStudent(){ if(sid&&S.students[sid]) return sid; if(auth&&S.students[auth.sid]){sid=auth.sid; return sid;} sid=null; return null; }
-function logIn(id){ auth={sid:id,at:Date.now()}; ls.set("g4auth",auth); sid=id; closeOv(); home(); }
-function logOut(){ if(T&&st) save(); if(CFG) flush(); auth=null; ls.set("g4auth",null); sid=null; home(); }
+function logIn(id){ auth={sid:id,at:Date.now()}; ls.set("g4auth",auth); sid=id; subj=null; ls.set("g4subj",null); closeOv(); home(); }
+function logOut(){ if(T&&st) save(); if(CFG) flush(); auth=null; ls.set("g4auth",null); sid=null; subj=null; ls.set("g4subj",null); home(); }
 const pinOnline=()=>mode==="online"&&CFG&&pinsOn;
 async function sha(s){ try{ const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(s)); return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join(""); }catch(e){ return null; } }
 async function rememberPin(id,pin){ const h=await sha("g4local:"+id+":"+pin); if(h){ const v=ls.get("g4pinv",{}); v[id]=h; ls.set("g4pinv",v);} }
@@ -490,11 +500,19 @@ function home(){
     ${list.length?`<p class="kl">Tap your name, then type your PIN.</p>`:`<p class="kl">Add a student to begin.</p>`}</section>`;
   } else {
     const name=S.students[sid].name;
-    $("home").innerHTML=`<div class="hhead"><div><h1>Hi, ${esc(name)}!</h1>
+    if(!subj){
+      const blurb={reading:"Read two passages, answer questions, and write an essay.", math:"Numbers, fractions, geometry, measurement and data."};
+      $("home").innerHTML=`<div class="hhead"><div><h1>Hi, ${esc(name)}!</h1><p class="lead">What do you want to practice today?</p></div>
+      <div class="row"><button class="btn ghost themebtn"></button><button class="btn" id="logOut">Log out</button></div></div>
+      ${notesHTML()}
+      <div class="pick2">${Object.entries(SUBJ).map(([k,v])=>{const tl=TESTS.filter(t=>subjOf(t)===k), fin=tl.filter(t=>S.prog[sid]&&S.prog[sid][t.id]&&S.prog[sid][t.id].done).length, inp=tl.filter(t=>has(sid,t.id)&&!S.prog[sid][t.id].done).length;
+        return `<button class="subjbtn s-${k}" data-subj="${k}"><span class="sico" aria-hidden="true">${k==="math"?"½ ×":"Aa"}</span><span class="stitle">${v}</span><span class="sblurb">${blurb[k]}</span><span class="sprog">${fin} of ${tl.length} finished${inp?` · ${inp} in progress`:""}</span></button>`;}).join("")}</div>`;
+      paintThemeButtons(); return;
+    }
+    $("home").innerHTML=`<div class="hhead"><div><button class="lnk back" id="toSubj">◀ Choose a subject</button><h1>${SUBJ[subj]}</h1>
     <p class="lead">Pick a test. Your answers save as you go, so you can stop and come back anytime.</p></div>
     <div class="row"><button class="btn ghost themebtn"></button><button class="btn" id="logOut">Log out</button></div></div>
     ${notesHTML()}
-    <div class="subj" role="tablist">${Object.entries(SUBJ).map(([k,v])=>`<button role="tab" data-subj="${k}" aria-selected="${k===subj}">${v}</button>`).join("")}</div>
     <div class="legend"><span class="lv lv1">Level 1 · On level</span><span class="lv lv2">Level 2 · Challenge</span><span class="lv lv3">Level 3 · Advanced</span></div>
     <div class="cards">${TESTS.filter(t=>subjOf(t)===subj).map(t=>{const s=S.prog[sid]&&S.prog[sid][t.id]; let stat="Not started", btns=`<button class="btn" data-start="${t.id}">Start test</button>`;
       if(s&&s.done){stat=`Finished · <b>${scoreOf(t,s)} / ${t.q.length}</b>`+(t.w?" reading":"")+(t.w&&wtotal(s)!=="–"?` · <b>${wtotal(s)} / 12</b> writing`:"");
@@ -520,6 +538,7 @@ $("home").addEventListener("click",e=>{const b=e.target.closest("button"); if(!b
   else if(b.id==="logOut") logOut();
   else if(b.id==="toDash") dash();
   else if(b.dataset.subj){ subj=b.dataset.subj; ls.set("g4subj",subj); home(); }
+  else if(b.id==="toSubj"){ subj=null; ls.set("g4subj",null); home(); }
   else if(!sid) return;
   else if(b.dataset.start) open(b.dataset.start);
   else if(b.dataset.res){open(b.dataset.res); results();}
