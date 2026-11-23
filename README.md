@@ -23,6 +23,8 @@ Six FAST-style practice tests for 4th grade. Each test has two passages with dif
 | Math Practice 2 | Challenge | Multi-digit operations, mixed numbers, protractors, data |
 | Math Practice 3 | Advanced | Multi-step problems, error analysis, composite area, data |
 
+**Word Problem Drills** (in the Math section): 5 sets of 10 story problems that teach *which operation to use*. For each problem the student picks the operation (+ − × ÷), picks the matching number sentence, then solves it. Instant feedback lights up the key phrase in the story and shows a bar model. Sets: Add or Subtract? · Multiply or Divide? · "More Than" or "Times As Many"? · All Four Operations · Two-Step Problems. The dashboard shows points and which operations get mixed up.
+
 Each math test follows Florida's Grade 4 FAST blueprint: about one-third whole numbers & algebra, one-third fractions & decimals, and one-third geometry, measurement & data.
 
 Printable versions with answer keys are in [`pdfs/`](pdfs/). Reading tests include lined writing pages.
