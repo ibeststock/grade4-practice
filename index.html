@@ -289,6 +289,10 @@ mark.clue{background:#ffd84a;color:#222;border-radius:4px;padding:0 3px}
 .dt td{border-bottom:1px solid var(--line);padding:8px;vertical-align:middle}
 .dt .r{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
 .pill{display:inline-block;font:600 12px Lexend,sans-serif;padding:3px 10px;border-radius:12px;background:var(--bg);color:var(--muted);white-space:nowrap}
+.lt td{vertical-align:top;font-size:14px;line-height:1.45}.lt .lm{font:800 18px Lexend,sans-serif;text-align:center}.lt tr.lr .lm{color:var(--good)}.lt tr.lw .lm{color:var(--bad)}.lt tr.lw{background:light-dark(#fdeeee,#3a1d1d)}.lt tr.lb .lm{color:var(--muted)}
+.lt details{margin:4px 0 0;padding:0;border:0;background:none;font-size:13px;color:var(--muted)}.lt summary{cursor:pointer;color:var(--accent);font-weight:600}
+.essayview{white-space:pre-wrap;line-height:1.6;max-height:360px;overflow:auto;padding:10px 12px;background:var(--bg);border-radius:8px}
+.livedot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#e0a000;margin-right:6px;vertical-align:1px;animation:lp 1.4s infinite}@keyframes lp{50%{opacity:.25}}
 .pill.done{background:var(--goodbg);color:var(--good)}.pill.prog{background:light-dark(#fff4d6,#3a2e0e);color:light-dark(#8a5a00,#ffcf70)}
 .btn.sm{min-height:36px;padding:4px 12px;font-size:14px}
 .lnk{background:none;border:0;color:var(--accent);text-decoration:underline;padding:0;font-weight:700;min-height:0}
@@ -441,11 +445,13 @@ async function connect(){
   rerender(); if(pend.size) flush();
 }
 (async()=>{ await null; await connect();
-  setInterval(async()=>{ if(!CFG) return; if(mode!=="online"){ await connect(); return; }
-    if(view==="dash"||view==="home"){ try{ await pull(); rerender(); }catch(e){} } },30000);
+  let tick=0;
+  setInterval(async()=>{ tick++; if(!CFG) return; const live=view==="dash"&&dashLive&&parOK(); if(!live&&tick%3) return;
+    if(mode!=="online"){ await connect(); return; }
+    if(view==="dash"||view==="home"){ try{ await pull(); liveAt=Date.now(); rerender(); }catch(e){} } },10000);
 })();
 
-function rerender(){ paintThemeButtons(); showSave(); if(view==="home") home(); else if(view==="dash") dash(); }
+function rerender(){ paintThemeButtons(); showSave(); if(view==="home") home(); else if(view==="dash"){ if(dashLive&&!parOK()) return; dash(); } }
 
 /* ---------- students & log in ---------- */
 function students(){ const m=S.students||{}; return Object.entries(m).sort((a,b)=>(a[1].created||0)-(b[1].created||0)); }
@@ -667,7 +673,7 @@ function home(){
   const list=students();
   if(!sid){
     $("home").innerHTML=`<div class="hhead"><div><h1>Grade 4 Reading &amp; Writing Practice</h1>
-    <p class="lead">Six practice tests in the style of Florida’s computer-based reading test.</p></div>
+    <p class="lead">Practice tests in the style of Florida’s FAST.</p></div>
     <div class="row"><button class="btn ghost themebtn"></button>${isOwner&&mode==="online"?`<button class="btn ghost" id="toDash">Parent dashboard</button>`:""}</div></div>
     ${notesHTML()}
     <section class="login"><h2>Who’s practicing today?</h2>
@@ -730,6 +736,7 @@ $("home").addEventListener("click",e=>{const b=e.target.closest("button"); if(!b
 const fmtD=ms=>ms?new Date(ms).toLocaleDateString([], {month:"short",day:"numeric"})+" "+new Date(ms).toLocaleTimeString([], {hour:"numeric",minute:"2-digit"}):"—";
 function dash(){
   view="dash"; T=null; st=null; $("home").hidden=true; $("app").hidden=true; $("dash").hidden=false; location.hash="dashboard";
+  if(dashLive) return liveView();
   const list=students(); if(!dashSid||!S.students[dashSid]) dashSid=sid&&S.students[sid]?sid:(list[0]||[])[0];
   let h=`<div class="hhead"><div><h1>Progress dashboard</h1><p class="lead">Progress for each student, saved in your Google Sheet. Refreshes every 30 seconds.</p></div><div class="row"><button class="btn ghost themebtn"></button><button class="btn ghost" data-home>◀ All tests</button></div></div>
   <div class="bar" id="bar" hidden></div>`;
@@ -754,7 +761,7 @@ function dash(){
     ${tl.map(t=>{const s=P[t.id]; const started=s&&(s.done||Object.keys(s.ans||{}).length||s.essay);
       const stt=!started?`<span class="pill">Not started</span>`:s.done?`<span class="pill done">Finished</span>`:`<span class="pill prog">In progress · ${Object.keys(s.ans).length}/${t.q.length}</span>`;
       const rd=s&&s.done?`<b>${scoreOf(t,s)}</b> / ${t.q.length}`:"—", wr=s&&s.done?(wtotal(s)==="–"?`<button class="lnk" data-dres="${t.id}">Score it</button>`:`<b>${wtotal(s)}</b> / 12`):"—";
-      return `<tr><td><b>${isR?"Test "+t.num+" · "+t.name:t.name}</b><br><span class="lv lv${t.level}" style="font-size:11px">${LV[t.level]}</span></td><td>${stt}</td><td class="r">${rd}</td>${isR?`<td class="r">${wr}</td>`:""}<td class="r">${s&&s.t?Math.round(s.t/60)+" min":"—"}</td><td>${s?fmtD(s.updated):"—"}</td><td>${s&&s.done?`<button class="btn ghost sm" data-dres="${t.id}">Results</button>`:""}</td></tr>`;}).join("")}
+      return `<tr><td><b>${isR?"Test "+t.num+" · "+t.name:t.name}</b><br><span class="lv lv${t.level}" style="font-size:11px">${LV[t.level]}</span></td><td>${stt}</td><td class="r">${rd}</td>${isR?`<td class="r">${wr}</td>`:""}<td class="r">${s&&s.t?Math.round(s.t/60)+" min":"—"}</td><td>${s?fmtD(s.updated):"—"}</td><td style="white-space:nowrap">${started?`<button class="btn ghost sm" data-live="${t.id}">${s.done?"Answers":"● Live answers"}</button>`:""}${s&&s.done?` <button class="btn ghost sm" data-dres="${t.id}">Results</button>`:""}</td></tr>`;}).join("")}
     </tbody></table></div></div>
     <div class="box"><h2 class="bh">${isR?"Reading skills":"Math skills"}</h2>${skl.length?`<p class="kl" style="margin-top:0">Weakest first. Practice the top ones.</p>`+skl.map(([k,[r,t]])=>`<div class="sk"><span>${k}</span><span class="bar2"><i style="width:${r/t*100}%;background:${r/t<0.6?"var(--bad)":r/t<0.8?"var(--l2)":"var(--accent)"}"></i></span><span class="n">${r} / ${t}</span></div>`).join(""):`<p class="kl">Finish a test to see skills here.</p>`}</div></div>`;
   }
@@ -774,10 +781,65 @@ $("dash").addEventListener("click",async e=>{const b=e.target.closest("button");
   if(b.hasAttribute("data-home")) home();
   else if(b.id==="cpLink"){ try{ await navigator.clipboard.writeText($("devLink").value); b.textContent="Copied ✓"; }catch(err){ $("devLink").select(); b.textContent="Press Ctrl+C"; } }
   else if(b.dataset.dsid){dashSid=b.dataset.dsid; dash();}
+  else if(b.dataset.live){dashLive=b.dataset.live; liveOpen=new Set(); scrollTo(0,0); dash(); if(parOK()){try{await pull(); liveAt=Date.now(); if(dashLive) dash();}catch(e){}}}
+  else if(b.dataset.lback!=null){dashLive=null; dash(); scrollTo(0,0);}
+  else if(b.dataset.lf){liveF=b.dataset.lf; dash();}
+  else if(b.id==="parGo"){ if(($("parIn").value||"").trim()===String(CFG&&CFG.code||"")){ try{sessionStorage.setItem("g4par","1");}catch(e){} parMem=true; dash(); try{await pull(); liveAt=Date.now(); dash();}catch(e){} } else { $("parMsg").textContent="That code doesn’t match."; } }
   else if(b.dataset.dres){sid=dashSid; ls.set("g4sid",sid); open(b.dataset.dres); results();}
   else if(b.dataset.rm){ if(!b.dataset.armed){b.dataset.armed=1;b.textContent="Click again to remove";return;}
     const id=b.dataset.rm; delete S.students[id]; persistLocal(); if(CFG){try{await api("removeStudent",{id});}catch(err){}} if(sid===id){sid=null;ls.set("g4sid",null);} dashSid=null; dash(); }
 });
+
+/* ---------- live answers (parents) ---------- */
+let dashLive=null, liveAt=0, liveF="all", liveOpen=new Set(), parMem=false;
+function parOK(){ if(parMem) return true; try{ return sessionStorage.getItem("g4par")==="1"; }catch(e){ return false; } }
+const plain=s=>String(s??"").replace(/<[^>]+>/g,"").replace(/\s+/g," ").trim();
+const clip=(s,n)=>{s=plain(s); return s.length>n?s.slice(0,n-1)+"…":s;};
+function ansText(q,a,correct){
+  a=a||{};
+  const pick=(o,v)=>v==null||v===""?null:`<b>${L[v]}</b> ${clip(o.opts[v],70)}`;
+  if(q.type==="ab"){ const x=correct?[q.a.ans[0],q.b.ans[0]]:[a.a,a.b]; if(!correct&&x[0]==null&&x[1]==null) return null;
+    return `A: ${x[0]!=null?pick(q.a,x[0]):"—"}<br>B: ${x[1]!=null?pick(q.b,x[1]):"—"}`; }
+  if(q.type==="ms"){ const v=correct?q.ans:(a.m||[]); return v.length?v.map(k=>pick(q,k)).join("<br>"):null; }
+  if(q.type==="match"){ const v=correct?q.ans:(a.m||[]); if(!v.some(x=>x!=null)) return null; return q.rows.map((r,k)=>`${clip(r,34)} → <b>${v[k]!=null?q.cols[v[k]]:"—"}</b>`).join("<br>"); }
+  if(q.type==="order"){ const v=correct?q.ans:(a.m||[]); if(!v.some(Boolean)) return null; return q.items.map((r,k)=>`<b>${v[k]||"—"}</b> ${clip(r,40)}`).join("<br>"); }
+  if(q.type==="num"){ const v=correct?q.ans[0]:a.m; return v!=null&&String(v).trim()!==""?`<b>${esc(v)}</b>${q.unit?" "+q.unit:""}`:null; }
+  return pick(q,correct?q.ans[0]:a.m);
+}
+function hasAns(q,a){ a=a||{}; if(q.type==="ab") return a.a!=null||a.b!=null; if(Array.isArray(a.m)) return a.m.some(x=>x!=null&&x!==""); return a.m!=null&&String(a.m).trim()!==""; }
+function liveView(){
+  const T0=TESTS.find(t=>t.id===dashLive), nm=esc((S.students[dashSid]||{}).name||"");
+  let h=`<div class="hhead"><div><button class="lnk" data-lback>◀ Back to dashboard</button><h1 style="margin-top:6px">${nm}’s answers</h1>
+    <p class="lead">${subjOf(T0)==="math"?T0.name:"Test "+T0.num+" · "+T0.name}</p></div><div class="row"><button class="btn ghost themebtn"></button></div></div>`;
+  if(!parOK()){
+    h+=`<div class="box" style="max-width:460px"><h2 class="bh">Parents only</h2><p class="kl" style="margin-top:0">This page shows the correct answers. Type your family code to open it. You’ll only need to do this once until you close the browser.</p>
+      <div class="row"><input id="parIn" type="password" autocomplete="off" style="flex:1;min-width:0;font-size:16px;padding:9px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)"><button class="btn" id="parGo">Open</button></div><p id="parMsg" class="kl" style="color:var(--bad)"></p></div>`;
+    $("dash").innerHTML=h; paintThemeButtons(); const i=$("parIn"); if(i){ i.focus(); i.addEventListener("keydown",e=>{if(e.key==="Enter") $("parGo").click();}); } return;
+  }
+  const s=(S.prog[dashSid]||{})[dashLive]||fresh();
+  const rows=T0.q.map((q,i)=>{const a=s.ans[i], an=hasAns(q,a); return {q,i,a,an,ok:an&&isRight(q,a),fl:!!(s.fl||{})[i]};});
+  const nA=rows.filter(r=>r.an).length, nR=rows.filter(r=>r.ok).length, nW=nA-nR;
+  const status=s.done?`<span class="pill done">Finished</span>`:`<span class="pill prog"><span class="livedot"></span>In progress</span>`;
+  h+=`<div class="kpis"><div class="box"><div class="kl">Status</div><div class="kv sm">${status}</div></div>
+    <div class="box"><div class="kl">Answered</div><div class="kv">${nA}<small> / ${T0.q.length}</small></div></div>
+    <div class="box"><div class="kl">Right so far</div><div class="kv" style="color:var(--good)">${nR}</div></div>
+    <div class="box"><div class="kl">Not right yet</div><div class="kv" style="color:var(--bad)">${nW}</div></div>
+    <div class="box"><div class="kl">Time</div><div class="kv">${Math.round((s.t||0)/60)}<small> min</small></div></div></div>
+    <p class="kl">${s.done?"":"Updates by itself every 10 seconds while this page is open. "}Last change from ${nm}: <b>${fmtD(s.updated)}</b>${liveAt?` · checked ${new Date(liveAt).toLocaleTimeString([], {hour:"numeric",minute:"2-digit",second:"2-digit"})}`:""}</p>
+    <div class="chips" style="margin:10px 0 12px">${[["all","All"],["wrong","Not right"],["right","Right"],["blank","Not answered"],["flag","Flagged"]].map(([k,l])=>`<button class="chip" data-lf="${k}" aria-pressed="${liveF===k}">${l}</button>`).join("")}</div>`;
+  const shown=rows.filter(r=>liveF==="all"||(liveF==="wrong"&&r.an&&!r.ok)||(liveF==="right"&&r.ok)||(liveF==="blank"&&!r.an)||(liveF==="flag"&&r.fl));
+  const isM=subjOf(T0)==="math";
+  h+=`<div class="box"><div class="scroll"><table class="dt lt"><thead><tr><th>#</th><th></th><th>Question</th><th>${nm}’s answer</th><th>Correct answer</th></tr></thead><tbody>
+  ${shown.map(({q,i,a,an,ok,fl})=>{ const y=ansText(q,a,false);
+    return `<tr class="${!an?"lb":ok?"lr":"lw"}" data-lq="${i}"><td><b>${i+1}</b>${fl?" 🚩":""}</td><td class="lm">${!an?"—":ok?"✓":"✗"}</td>
+      <td><span class="tag">${q.skill}</span> <span class="kl">${isM?(q.cat||""):q.p===0?"Both passages":"Passage "+q.p}</span><br>${clip(q.type==="ab"?q.a.stem:q.stem,140)}</td>
+      <td>${y||`<span class="kl">not answered yet</span>`}</td><td>${ansText(q,a,true)}<details ${liveOpen.has(i)?"open":""} data-ld="${i}"><summary>Why</summary>${q.why}</details></td></tr>`;}).join("")||`<tr><td colspan="5" class="kl">Nothing here.</td></tr>`}
+  </tbody></table></div></div>`;
+  if(T0.w){ const words=plain(s.essay).split(" ").filter(Boolean).length;
+    h+=`<div class="box" style="margin-top:14px"><h2 class="bh">Writing so far · ${words} words</h2>${s.essay?`<div class="essayview">${esc(s.essay)}</div>`:`<p class="kl">No writing yet.</p>`}</div>`; }
+  $("dash").innerHTML=h; paintThemeButtons();
+  $("dash").querySelectorAll("details[data-ld]").forEach(d=>d.addEventListener("toggle",()=>{const k=+d.dataset.ld; d.open?liveOpen.add(k):liveOpen.delete(k);}));
+}
 
 /* ---------- passages ---------- */
 function passageHTML(P,k){
