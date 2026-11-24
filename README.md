@@ -16,6 +16,8 @@ Six FAST-style practice tests for 4th grade. Each test has two passages with dif
 | 6 | Advanced | How hurricanes form · Storm poem | Expository |
 | 7 | Challenge | Lighthouse poem · How lighthouses solved sailors’ problems | Expository |
 
+**Glossary:** like the real FAST, each reading passage has 3 harder words underlined with a small number. Tap a word to see its meaning, or read the Glossary at the end of the passage. Glossary words never overlap a vocabulary question.
+
 ### Math (FAST-style, 40 questions each, no calculator)
 
 | Test | Level | Topics |
