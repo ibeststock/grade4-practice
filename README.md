@@ -18,7 +18,9 @@ Six FAST-style practice tests for 4th grade. Each test has two passages with dif
 
 **Glossary:** like the real FAST, each reading passage has 3 harder words underlined with a small number. Tap a word to see its meaning, or read the Glossary at the end of the passage. Glossary words never overlap a vocabulary question.
 
-**Live answers (parents):** on the dashboard, press **● Live answers** next to any started test to see each answer as it's given: right ✓, not right ✗, or not answered yet, next to the correct answer and a short "why". It refreshes every 10 seconds and shows the essay as it's written. It also shows her **first-try answers**: the answer she had the first time she moved on from each question, along with which ones she later fixed or changed from right to wrong, and a first-try score. When a test is retaken, earlier tries (scores and dates) are kept. To keep students from peeking, it asks for the family code once per browser session.
+**Live answers (parents):** on the dashboard, press **● Live answers** next to any started test to see each answer as it's given: right ✓, not right ✗, or not answered yet, next to the correct answer and a short "why". It refreshes every 10 seconds and shows the essay as it's written. When you go over a test together, press **Mark** on any question she got wrong at first; the dashboard then shows a **first-try score** next to the final score. Marks are saved separately, so the student's own saves never erase them. When a test is retaken, earlier tries (scores and dates) are kept. To keep students from peeking, it asks for the family code once per browser session.
+
+**Drill results:** press **Results** next to a drill on the dashboard to see each story problem, the operation, number sentence and answer, whether each step was right the first time, and which wrong choices she tried.
 
 ### Math (FAST-style, 40 questions each, no calculator)
 
