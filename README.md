@@ -14,6 +14,7 @@ Six FAST-style practice tests for 4th grade. Each test has two passages with dif
 | 4 | Challenge | Coral reef nurseries · Reefs vs. rainforests | Argumentative |
 | 5 | Advanced | Launch-day story · Rocket science | Argumentative |
 | 6 | Advanced | How hurricanes form · Storm poem | Expository |
+| 7 | Challenge | Lighthouse poem · How lighthouses solved sailors’ problems | Expository |
 
 ### Math (FAST-style, 40 questions each, no calculator)
 
