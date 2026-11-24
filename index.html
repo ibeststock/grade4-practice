@@ -291,6 +291,8 @@ mark.clue{background:#ffd84a;color:#222;border-radius:4px;padding:0 3px}
 .pill{display:inline-block;font:600 12px Lexend,sans-serif;padding:3px 10px;border-radius:12px;background:var(--bg);color:var(--muted);white-space:nowrap}
 .lt td{vertical-align:top;font-size:14px;line-height:1.45}.lt .lm{font:800 18px Lexend,sans-serif;text-align:center}.lt tr.lr .lm{color:var(--good)}.lt tr.lw .lm{color:var(--bad)}.lt tr.lw{background:light-dark(#fdeeee,#3a1d1d)}.lt tr.lb .lm{color:var(--muted)}
 .lt details{margin:4px 0 0;padding:0;border:0;background:none;font-size:13px;color:var(--muted)}.lt summary{cursor:pointer;color:var(--accent);font-weight:600}
+.firsta{margin-top:6px;font-size:12.5px;padding:3px 8px;border-radius:6px;display:inline-block}.firsta.fno{background:light-dark(#fdeeee,#3a1d1d);color:var(--bad)}.firsta.fok{background:var(--goodbg);color:var(--good)}
+.note.chg{margin:0 0 10px}
 .essayview{white-space:pre-wrap;line-height:1.6;max-height:360px;overflow:auto;padding:10px 12px;background:var(--bg);border-radius:8px}
 .livedot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#e0a000;margin-right:6px;vertical-align:1px;animation:lp 1.4s infinite}@keyframes lp{50%{opacity:.25}}
 .pill.done{background:var(--goodbg);color:var(--good)}.pill.prog{background:light-dark(#fff4d6,#3a2e0e);color:light-dark(#8a5a00,#ffcf70)}
@@ -654,6 +656,13 @@ $("home").addEventListener("click",e=>{ if(view!=="drill") return; const b=e.tar
 
 /* ---------- menu ---------- */
 function scoreOf(t,s){return t.q.filter((q,i)=>isRight(q,s.ans[i])).length;}
+const hasFirst=s=>!!(s&&s.first&&Object.keys(s.first).length);
+function firstScore(t,s){return t.q.filter((q,i)=>isRight(q,s.first&&s.first[i]!==undefined?s.first[i]:s.ans[i])).length;}
+function retakeFrom(s0,tid){ const old=(S.prog[s0]||{})[tid], t=TESTS.find(x=>x.id===tid), nw=fresh();
+  const hist=(old&&Array.isArray(old.hist))?old.hist.slice(-4):[];
+  if(old&&t&&(old.done||Object.keys(old.ans||{}).length)) hist.push({at:old.submitted||old.updated||Date.now(), done:!!old.done, n:t.q.length,
+    score:scoreOf(t,old), first:hasFirst(old)?firstScore(t,old):null, answered:Object.keys(old.ans||{}).length, w:t.w&&wtotal(old)!=="–"?wtotal(old):null, ans:old.ans, fa:old.first||null});
+  if(hist.length) nw.hist=hist; return nw; }
 function notesHTML(){ return `
   <div class="bar" id="bar" hidden></div>
   ${mode==="loading"?`<p class="note">Connecting to saved progress…</p>`:""}
@@ -729,7 +738,7 @@ $("home").addEventListener("click",e=>{const b=e.target.closest("button"); if(!b
   else if(!sid) return;
   else if(b.dataset.start) open(b.dataset.start);
   else if(b.dataset.res){open(b.dataset.res); results();}
-  else if(b.dataset.retake){ if(b.dataset.armed){S.prog[sid][b.dataset.retake]=fresh(); saveFor(sid,b.dataset.retake); open(b.dataset.retake);} else {b.dataset.armed=1; b.textContent="Click again to erase answers";}}
+  else if(b.dataset.retake){ if(b.dataset.armed){S.prog[sid][b.dataset.retake]=retakeFrom(sid,b.dataset.retake); saveFor(sid,b.dataset.retake); open(b.dataset.retake);} else {b.dataset.armed=1; b.textContent="Click again to erase answers";}}
 });
 
 /* ---------- dashboard ---------- */
@@ -760,8 +769,9 @@ function dash(){
     h+=`<h2 class="sech">${label}</h2><div class="dgrid"><div class="box"><div class="scroll"><table class="dt"><thead><tr><th>Test</th><th>Status</th><th class="r">${isR?"Reading":"Score"}</th>${isR?`<th class="r">Writing</th>`:""}<th class="r">Time</th><th>Last active</th><th></th></tr></thead><tbody>
     ${tl.map(t=>{const s=P[t.id]; const started=s&&(s.done||Object.keys(s.ans||{}).length||s.essay);
       const stt=!started?`<span class="pill">Not started</span>`:s.done?`<span class="pill done">Finished</span>`:`<span class="pill prog">In progress · ${Object.keys(s.ans).length}/${t.q.length}</span>`;
-      const rd=s&&s.done?`<b>${scoreOf(t,s)}</b> / ${t.q.length}`:"—", wr=s&&s.done?(wtotal(s)==="–"?`<button class="lnk" data-dres="${t.id}">Score it</button>`:`<b>${wtotal(s)}</b> / 12`):"—";
-      return `<tr><td><b>${isR?"Test "+t.num+" · "+t.name:t.name}</b><br><span class="lv lv${t.level}" style="font-size:11px">${LV[t.level]}</span></td><td>${stt}</td><td class="r">${rd}</td>${isR?`<td class="r">${wr}</td>`:""}<td class="r">${s&&s.t?Math.round(s.t/60)+" min":"—"}</td><td>${s?fmtD(s.updated):"—"}</td><td style="white-space:nowrap">${started?`<button class="btn ghost sm" data-live="${t.id}">${s.done?"Answers":"● Live answers"}</button>`:""}${s&&s.done?` <button class="btn ghost sm" data-dres="${t.id}">Results</button>`:""}</td></tr>`;}).join("")}
+      const hs=(s&&s.hist||[]).filter(x=>x.done), extra=(s&&s.done&&hasFirst(s)&&firstScore(t,s)!==scoreOf(t,s)?`<br><span class="kl">first try ${firstScore(t,s)}</span>`:"")+(hs.length?`<br><span class="kl">earlier: ${hs.map(x=>x.score).join(", ")}</span>`:"");
+      const rd=(s&&s.done?`<b>${scoreOf(t,s)}</b> / ${t.q.length}`:"—")+extra, wr=s&&s.done?(wtotal(s)==="–"?`<button class="lnk" data-dres="${t.id}">Score it</button>`:`<b>${wtotal(s)}</b> / 12`):"—";
+      return `<tr><td><b>${isR?"Test "+t.num+" · "+t.name:t.name}</b><br><span class="lv lv${t.level}" style="font-size:11px">${LV[t.level]}</span></td><td>${stt}</td><td class="r">${rd}</td>${isR?`<td class="r">${wr}</td>`:""}<td class="r">${s&&s.t?Math.round(s.t/60)+" min":"—"}</td><td>${s?fmtD(s.updated):"—"}</td><td style="white-space:nowrap">${started||(s&&s.hist&&s.hist.length)?`<button class="btn ghost sm" data-live="${t.id}">${s.done?"Answers":"● Live answers"}</button>`:""}${s&&s.done?` <button class="btn ghost sm" data-dres="${t.id}">Results</button>`:""}</td></tr>`;}).join("")}
     </tbody></table></div></div>
     <div class="box"><h2 class="bh">${isR?"Reading skills":"Math skills"}</h2>${skl.length?`<p class="kl" style="margin-top:0">Weakest first. Practice the top ones.</p>`+skl.map(([k,[r,t]])=>`<div class="sk"><span>${k}</span><span class="bar2"><i style="width:${r/t*100}%;background:${r/t<0.6?"var(--bad)":r/t<0.8?"var(--l2)":"var(--accent)"}"></i></span><span class="n">${r} / ${t}</span></div>`).join(""):`<p class="kl">Finish a test to see skills here.</p>`}</div></div>`;
   }
@@ -817,24 +827,34 @@ function liveView(){
     $("dash").innerHTML=h; paintThemeButtons(); const i=$("parIn"); if(i){ i.focus(); i.addEventListener("keydown",e=>{if(e.key==="Enter") $("parGo").click();}); } return;
   }
   const s=(S.prog[dashSid]||{})[dashLive]||fresh();
-  const rows=T0.q.map((q,i)=>{const a=s.ans[i], an=hasAns(q,a); return {q,i,a,an,ok:an&&isRight(q,a),fl:!!(s.fl||{})[i]};});
+  const rows=T0.q.map((q,i)=>{const a=s.ans[i], an=hasAns(q,a), f=s.first&&s.first[i]!==undefined?s.first[i]:undefined;
+    const ch=f!==undefined&&JSON.stringify(f)!==JSON.stringify(a), fok=f!==undefined?isRight(q,f):null;
+    return {q,i,a,an,ok:an&&isRight(q,a),fl:!!(s.fl||{})[i],f,ch,fok};});
   const nA=rows.filter(r=>r.an).length, nR=rows.filter(r=>r.ok).length, nW=nA-nR;
+  const fixed=rows.filter(r=>r.ch&&!r.fok&&r.ok).length, broke=rows.filter(r=>r.ch&&r.fok&&!r.ok).length, other=rows.filter(r=>r.ch).length-fixed-broke;
+  const fs=hasFirst(s)?rows.filter(r=>r.f!==undefined?r.fok:r.ok).length:null;
   const status=s.done?`<span class="pill done">Finished</span>`:`<span class="pill prog"><span class="livedot"></span>In progress</span>`;
   h+=`<div class="kpis"><div class="box"><div class="kl">Status</div><div class="kv sm">${status}</div></div>
     <div class="box"><div class="kl">Answered</div><div class="kv">${nA}<small> / ${T0.q.length}</small></div></div>
     <div class="box"><div class="kl">Right so far</div><div class="kv" style="color:var(--good)">${nR}</div></div>
     <div class="box"><div class="kl">Not right yet</div><div class="kv" style="color:var(--bad)">${nW}</div></div>
+    <div class="box"><div class="kl">First-try score</div><div class="kv">${fs==null?"—":fs}<small>${fs==null?"":" / "+T0.q.length}</small></div></div>
     <div class="box"><div class="kl">Time</div><div class="kv">${Math.round((s.t||0)/60)}<small> min</small></div></div></div>
+    ${fs!=null?`<div class="note chg"><b>Changed answers:</b> ${fixed} fixed (wrong → right) · ${broke} changed from right to wrong${other?` · ${other} other change${other>1?"s":""}`:""}. ${s.done?`Final score <b>${nR}</b>, first-try score <b>${fs}</b>.`:""} <span class="kl">“First try” is the answer she had the first time she moved on from a question.</span></div>`:""}
     <p class="kl">${s.done?"":"Updates by itself every 10 seconds while this page is open. "}Last change from ${nm}: <b>${fmtD(s.updated)}</b>${liveAt?` · checked ${new Date(liveAt).toLocaleTimeString([], {hour:"numeric",minute:"2-digit",second:"2-digit"})}`:""}</p>
-    <div class="chips" style="margin:10px 0 12px">${[["all","All"],["wrong","Not right"],["right","Right"],["blank","Not answered"],["flag","Flagged"]].map(([k,l])=>`<button class="chip" data-lf="${k}" aria-pressed="${liveF===k}">${l}</button>`).join("")}</div>`;
-  const shown=rows.filter(r=>liveF==="all"||(liveF==="wrong"&&r.an&&!r.ok)||(liveF==="right"&&r.ok)||(liveF==="blank"&&!r.an)||(liveF==="flag"&&r.fl));
+    <div class="chips" style="margin:10px 0 12px">${[["all","All"],["wrong","Not right"],["right","Right"],["changed","Changed"],["blank","Not answered"],["flag","Flagged"]].map(([k,l])=>`<button class="chip" data-lf="${k}" aria-pressed="${liveF===k}">${l}</button>`).join("")}</div>`;
+  const shown=rows.filter(r=>liveF==="all"||(liveF==="wrong"&&r.an&&!r.ok)||(liveF==="right"&&r.ok)||(liveF==="blank"&&!r.an)||(liveF==="flag"&&r.fl)||(liveF==="changed"&&r.ch));
   const isM=subjOf(T0)==="math";
   h+=`<div class="box"><div class="scroll"><table class="dt lt"><thead><tr><th>#</th><th></th><th>Question</th><th>${nm}’s answer</th><th>Correct answer</th></tr></thead><tbody>
-  ${shown.map(({q,i,a,an,ok,fl})=>{ const y=ansText(q,a,false);
+  ${shown.map(({q,i,a,an,ok,fl,f,ch,fok})=>{ const y=ansText(q,a,false);
     return `<tr class="${!an?"lb":ok?"lr":"lw"}" data-lq="${i}"><td><b>${i+1}</b>${fl?" 🚩":""}</td><td class="lm">${!an?"—":ok?"✓":"✗"}</td>
       <td><span class="tag">${q.skill}</span> <span class="kl">${isM?(q.cat||""):q.p===0?"Both passages":"Passage "+q.p}</span><br>${clip(q.type==="ab"?q.a.stem:q.stem,140)}</td>
-      <td>${y||`<span class="kl">not answered yet</span>`}</td><td>${ansText(q,a,true)}<details ${liveOpen.has(i)?"open":""} data-ld="${i}"><summary>Why</summary>${q.why}</details></td></tr>`;}).join("")||`<tr><td colspan="5" class="kl">Nothing here.</td></tr>`}
+      <td>${y||`<span class="kl">not answered yet</span>`}${ch?`<div class="firsta ${fok?"fok":"fno"}">First try ${fok?"✓":"✗"}: ${ansText(q,f,false)||"—"}</div>`:""}</td><td>${ansText(q,a,true)}<details ${liveOpen.has(i)?"open":""} data-ld="${i}"><summary>Why</summary>${q.why}</details></td></tr>`;}).join("")||`<tr><td colspan="5" class="kl">Nothing here.</td></tr>`}
   </tbody></table></div></div>`;
+  const hist=(s.hist||[]);
+  if(hist.length) h+=`<div class="box" style="margin-top:14px"><h2 class="bh">Earlier tries</h2><table class="dt"><thead><tr><th>Try</th><th>Date</th><th class="r">Score</th><th class="r">First try</th>${T0.w?`<th class="r">Writing</th>`:""}</tr></thead><tbody>
+    ${hist.map((x,k)=>`<tr><td>Try ${k+1}${x.done?"":" <span class=\"kl\">(not finished, "+x.answered+" answered)</span>"}</td><td>${fmtD(x.at)}</td><td class="r"><b>${x.score}</b> / ${x.n}</td><td class="r">${x.first==null?"—":x.first+" / "+x.n}</td>${T0.w?`<td class="r">${x.w==null?"—":x.w+" / 12"}</td>`:""}</tr>`).join("")}
+    <tr><td><b>Now</b></td><td>${fmtD(s.updated)}</td><td class="r">${s.done?`<b>${nR}</b> / ${T0.q.length}`:`<span class="kl">in progress</span>`}</td><td class="r">${fs==null?"—":fs+" / "+T0.q.length}</td>${T0.w?`<td class="r">${s.done&&wtotal(s)!=="–"?wtotal(s)+" / 12":"—"}</td>`:""}</tr></tbody></table></div>`;
   if(T0.w){ const words=plain(s.essay).split(" ").filter(Boolean).length;
     h+=`<div class="box" style="margin-top:14px"><h2 class="bh">Writing so far · ${words} words</h2>${s.essay?`<div class="essayview">${esc(s.essay)}</div>`:`<p class="kl">No writing yet.</p>`}</div>`; }
   $("dash").innerHTML=h; paintThemeButtons();
@@ -963,11 +983,15 @@ $("q").addEventListener("change",e=>{
   else return;
   save(); renderNav();
 });
-function go(i){cur=Math.max(0,Math.min(lastIdx(),i)); view="test"; closeOv(); showPlayer(true); renderQ();}
+/* first answer: what she had the first time she moved on from a question */
+function capFirst(i){ if(!T||!st||st.done||i==null||i<0||i>=T.q.length) return false; st.first=st.first||{};
+  if(st.first[i]!==undefined||!answered(i)) return false; st.first[i]=JSON.parse(JSON.stringify(st.ans[i])); return true; }
+function capAll(){ let c=false; if(T&&st) for(let i=0;i<T.q.length;i++) c=capFirst(i)||c; return c; }
+function go(i){ if(capFirst(cur)) save(); cur=Math.max(0,Math.min(lastIdx(),i)); view="test"; closeOv(); showPlayer(true); renderQ();}
 $("back").onclick=()=>go(cur-1);
 $("next").onclick=()=>cur===lastIdx()?(st.done?results():review()):go(cur+1);
 $("flag").onclick=()=>{st.fl[cur]=!st.fl[cur]; save(); renderQ();};
-$("tHome").onclick=()=>{if(st) save(); if(mode==="online") flush(); home();};
+$("tHome").onclick=()=>{if(st){capFirst(cur); save();} if(mode==="online") flush(); home();};
 
 /* ---------- highlighter ---------- */
 let hc=0, erasing=false;
@@ -1060,7 +1084,7 @@ setInterval(()=>{if(T&&st&&!st.done&&((view==="test"&&!$("split").hidden)||view=
 function closeOv(){$("ov").classList.remove("open");}
 $("ov").addEventListener("click",e=>{if(e.target.id==="ov") closeOv();});
 function review(){
-  armed=false; const left=[...Array(lastIdx()+1).keys()].filter(i=>!answered(i)).length;
+  if(capFirst(cur)) save(); armed=false; const left=[...Array(lastIdx()+1).keys()].filter(i=>!answered(i)).length;
   let h=`<h2>Review your answers</h2><p>Click any box to go back to it. Flagged items have an orange border.</p><div class="grid">`;
   for(let i=0;i<=lastIdx();i++) h+=`<button data-go="${i}" class="${answered(i)?"done":""} ${st.fl[i]?"fl":""}"><b>${i===W?"Writing":"Question "+(i+1)}</b><br>${answered(i)?"Answered":"Not answered"}${st.fl[i]?" · ⚑":""}</button>`;
   h+=`</div><p>${left?`<b>${left}</b> item${left>1?"s are":" is"} not finished yet.`:"Everything is answered."}</p>
@@ -1071,7 +1095,7 @@ $("md").addEventListener("click",e=>{const t=e.target.closest("button"); if(!t) 
   if(t.dataset.go!=null) go(+t.dataset.go);
   else if(t.hasAttribute("data-close")) closeOv();
   else if(t.hasAttribute("data-submit")){const left=[...Array(lastIdx()+1).keys()].filter(i=>!answered(i)).length;
-    if(left&&!armed){armed=true;t.textContent="Submit anyway";return;} st.done=true; st.submitted=Date.now(); save(); if(mode==="online") flush(); closeOv(); results();}
+    if(left&&!armed){armed=true;t.textContent="Submit anyway";return;} capAll(); st.done=true; st.submitted=Date.now(); save(); if(mode==="online") flush(); closeOv(); results();}
 });
 
 /* ---------- scoring ---------- */
@@ -1128,7 +1152,7 @@ $("repin").addEventListener("click",e=>{const b=e.target.closest("button"); if(!
   else if(b.hasAttribute("data-home")) home();
   else if(b.hasAttribute("data-dash")) dash();
   else if(b.hasAttribute("data-look")) go(0);
-  else if(b.hasAttribute("data-retake")){ if(!b.dataset.armed){b.dataset.armed=1;b.textContent="Click again to erase answers";return;} S.prog[sid][T.id]=fresh(); saveFor(sid,T.id); open(T.id);}
+  else if(b.hasAttribute("data-retake")){ if(!b.dataset.armed){b.dataset.armed=1;b.textContent="Click again to erase answers";return;} S.prog[sid][T.id]=retakeFrom(sid,T.id); saveFor(sid,T.id); open(T.id);}
 });
 $("repin").addEventListener("change",e=>{const s=e.target.closest("select"); if(!s) return; st.rub[s.dataset.r]=s.value; save(); $("wt").textContent=wtotal(st);});
 
